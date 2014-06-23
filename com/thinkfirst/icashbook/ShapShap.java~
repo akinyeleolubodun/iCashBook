@@ -1,0 +1,259 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package com.thinkfirst.icashbook;
+
+import java.awt.Point;
+import java.awt.event.MouseWheelEvent;
+
+public class ShapShap extends javax.swing.JFrame{
+    public ShapShap(){
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        getContentPane().setPreferredSize(new java.awt.Dimension(500,500));
+        centerOnScreen(this);Display d;
+        getContentPane().add(d=new Display());
+        pack();
+        setVisible(true);
+        d.setFocusable(true);
+//        d.requestFocusInWindow();
+//        System.out.println(this.getFocusOwner());
+    }
+    public void centerOnScreen(java.awt.Component c){
+        java.awt.Toolkit toolkit=c.getToolkit();
+        java.awt.Dimension screenSize=toolkit.getScreenSize();
+        c.setLocation((screenSize.width-c.getPreferredSize().width)>>1,(screenSize.height-c.getPreferredSize().height)>>1);
+    }
+
+    
+    class SpriteRect{//Rectangle that defines a sprite
+            private Point a, b, c, d;
+            //Rectangle described by a->b->c->d->a
+            SpriteRect(Point a,Point b,Point c,Point d){//Rectangle that takes its four points
+                this.a=a;
+                this.b=b;
+                this.c=c;
+                this.d=d;
+            }
+            public SpriteRect rotate(Point anchor,double angleInRadians){
+                Point a=rotate(anchor,this.a,angleInRadians);
+                Point b=rotate(anchor,this.b,angleInRadians);
+                Point c=rotate(anchor,this.c,angleInRadians);
+                Point d=rotate(anchor,this.d,angleInRadians);
+                return new SpriteRect(a,b,c,d);
+            }
+            //+ve rotation goes in anticlockwise direction.
+            private Point rotate(Point referencePoint,Point otherPoint,double angleInRadians){
+                double beta=Math.atan2((double)otherPoint.y-referencePoint.y,(double)otherPoint.x-referencePoint.x);
+                double r=Math.hypot((double)otherPoint.y-referencePoint.y,(double)otherPoint.x-referencePoint.x);
+                return new Point((int)Math.round(r*Math.cos(beta+angleInRadians)+referencePoint.x),
+                                 (int)Math.round(r*Math.sin(beta+angleInRadians)+referencePoint.y));
+            }
+            //returns true if the specified 'point' lies entirely inside this rectangle
+            public boolean contains(Point point){
+                boolean ab=isCounterClockwise(a,b,point);
+                if(ab)//follow route a->b->c->d->a
+                    return isCounterClockwise(b,c,point)&&isCounterClockwise(c,d,point)&&isCounterClockwise(d,a,point);
+                //follow route b->a->d->c->b
+                return isCounterClockwise(a,d,point)&&isCounterClockwise(d,c,point)&&isCounterClockwise(c,b,point);
+            }
+            
+            //taken in the direction a->b->c, this method returns
+            //true if the route is counterclockwise, else it returns false.
+            private boolean isCounterClockwise(Point a,Point b,Point c){
+                return (b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x)>0;
+            }
+            public String toString(){
+                return a+"\n"+b+"\n"+c+"\n"+d;
+            }
+        }
+
+    private class Display extends javax.swing.JComponent{
+        Sprite sprite=new Sprite();
+        private double currAngle;
+        private double rotateAngle=Math.toRadians(10);
+        int dx,dy;
+        public Display(){
+            final javax.swing.JLabel label=new javax.swing.JLabel();
+            label.setBounds(100,450,300,30);
+//            label.setText("a label");
+//            label.setBackground(Color.red);
+//            label.setOpaque(true);
+            add(label);
+            addKeyListener(new java.awt.event.KeyAdapter(){
+                public void keyPressed(java.awt.event.KeyEvent e){
+                    switch(e.getKeyCode()){
+                        case java.awt.event.KeyEvent.VK_LEFT://anticlockwise
+//                            sprite.swirl(-1);//Swirl using Java's coordinate system
+                            currAngle-=rotateAngle;
+                            repaint();
+                            break;
+                        case java.awt.event.KeyEvent.VK_RIGHT://clockwise
+                            sprite.swirl(1);//Swirl using Java's coordinate system
+                            currAngle+=rotateAngle;
+//                            dx+=1;
+                            repaint();
+                            break;
+                    }
+                }
+            });
+//            addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
+//                public void mouseMoved(java.awt.event.MouseEvent e){
+//                   label.setText(e.getX()+", "+e.getY());
+//                }
+//            });
+            addMouseWheelListener(new java.awt.event.MouseWheelListener() {
+                @Override
+                public void mouseWheelMoved(MouseWheelEvent e){
+                    System.out.println(e.getScrollAmount());
+                }
+            });
+            addMouseListener(new java.awt.event.MouseAdapter(){
+                public void mouseClicked(java.awt.event.MouseEvent e){
+                    System.out.println(rotatedRect.contains(new Point(e.getX(),e.getY())));
+                }
+            });
+        }
+    
+    
+    SpriteRect rect=new SpriteRect(
+            new Point(200,200),//a
+            new Point(300,200),//b
+            new Point(300,210),//c
+            new Point(200,210));//d
+    
+    SpriteRect rotatedRect;
+        public void paintComponent(java.awt.Graphics g){
+            super.paintComponent(g);
+            java.awt.Graphics2D g2d=(java.awt.Graphics2D)g;
+            int x1=200,y1=200,w=100,h=10;
+            Point anchor=(Point)rect.d.clone();//rotate about the D point i.e. bottom left of the rectangle
+//            g2d.drawRect(anchor.x,anchor.y,0,0);
+            g2d.setPaint(java.awt.Color.blue);//g2d.rotate(WIDTH);
+            g2d.rotate(currAngle,anchor.x,anchor.y);
+            java.awt.geom.Rectangle2D.Float r=new java.awt.geom.Rectangle2D.Float(x1,y1,w,h);
+            g2d.draw(r);
+            java.awt.geom.Rectangle2D bounds=g2d.getTransform().createTransformedShape(r).getBounds2D();
+            java.awt.Rectangle rect=bounds.getBounds();
+            System.out.println("Rectangle Bounds: "+bounds);
+            System.out.println("Line Bounds double: "+(bounds.getX()+bounds.getWidth())+", "+(bounds.getY()+bounds.getHeight()));
+            System.out.println("Line Bounds int: "+(rect.x+rect.width)+", "+(rect.y+rect.height));
+//            Point res=rotate(ref,other,currAngle);
+//            System.out.println(res.x+", "+res.y);
+            g2d.rotate(-currAngle,anchor.x,anchor.y);
+            g2d.draw(bounds);//(java.awt.geom.Rectangle2D)bounds.clone()
+            g2d.setPaint(java.awt.Color.red);
+            g2d.drawRect((int)anchor.x,(int)anchor.y,0,0);
+            System.out.println(this.rect);
+            rotatedRect=this.rect.rotate(anchor,currAngle);
+            System.out.println(rotatedRect);
+////            int midX=getWidth()>>1;
+////            int midY=getHeight()>>1;//System.out.println(midX+", "+midY);
+////            g2d.drawLine(midX,midY,midX+sprite.currXY[Sprite.SCALE_X],midY-sprite.currXY[Sprite.SCALE_Y]);
+////            System.out.println(Math.toDegrees(sprite.getAngle()));
+//            java.awt.Rectangle rect1=new java.awt.Rectangle((getWidth()-100)>>1,(getHeight()-100)>>1,100,100);
+//            g2d.fillRect(rect1.x,rect1.y,rect1.width,rect1.height);
+//            System.out.println("Rect1 bounds: "+rect1.getBounds());
+//            java.awt.Rectangle rect2=new java.awt.Rectangle((getWidth()-100)>>1,(getHeight()-100)>>1,100,100);
+//            g2d.rotate(sprite.getAngleJavaCoord(),rect2.x,rect2.y+rect2.height);
+//            System.out.println(Math.toDegrees(sprite.getAngleJavaCoord()));
+//            System.out.println(sprite.getX()+", "+sprite.getY());
+////            System.out.println(Math.toDegrees(Math.atan2(0,-5)));
+////            g2d.translate(dx,dy);
+////            rect2.x+=dx;rect2.y+=dy;
+//            g2d.drawRect(rect2.x,rect2.y,rect2.width,rect2.height);
+//            System.out.println(rect1.intersects(rect2));
+////            System.out.println(-4<<1);
+//            System.out.println("Rect2 bounds: "+g2d.getTransform().createTransformedShape(rect2).getBounds());
+        }
+        public double getRotation(){
+            return currAngle;
+        }
+    }
+    public static void main(String[] args){
+        new ShapShap();
+    }
+}
+
+    class Sprite{
+        public static final int SCALE_X=0,//must be one
+                                SCALE_Y=SCALE_X^1;//must be the two's complement (i.e. -1) coz these properties are used in computations
+        private final int maxAmount=150;//max amount that can be handled. //should always be positive for sake of consistency
+        private int[] currXY={-maxAmount,0};//current x,y value of the coordinate. This is default, it lies on zero degrees.
+        private int currentScale=SCALE_X;//holds the current scale
+        private double delay=0;//positive delay please
+        private double countdown=delay;
+        
+        
+        /**
+         * Swirl in high school mathematical coordinate System.<br>
+         * amount is a signed int.<p>
+         * If amount is positive, rotation goes anticlockwise.<br>
+         * If amount is negative, rotation goes clockwise.<br>
+         * amount of zero indicates no swirling.<br>
+         * amount of 1 indicates the smallest possible swirl.
+         * @param amount the amount by which this sprite should swirl.
+         */
+        public void swirl(int amount){
+//            System.out.println("swirl "+amount);
+            if(--countdown>=0)
+                return;
+            countdown=delay;
+            if(amount>maxAmount<<1)amount=maxAmount<<1;//maximum possible swirl
+            if(amount<-maxAmount<<1)amount=-maxAmount<<1;//minimum possible swirl
+            
+            int other=currentScale^1;
+            if(currXY[currentScale]==maxAmount)
+                currXY[other]-=amount*(currentScale==SCALE_X?1:-1);
+            else
+                currXY[other]+=amount*(currentScale==SCALE_X?1:-1);
+            if(currXY[other]<-maxAmount){
+                amount=-maxAmount-currXY[other];
+                currXY[other]=-maxAmount;
+            }else if(currXY[other]>maxAmount){
+                amount=-maxAmount+currXY[other];
+                currXY[other]=maxAmount;
+            }else
+                return;
+            if(currXY[currentScale]==maxAmount)
+                currXY[currentScale]=maxAmount-amount;
+            else
+                currXY[currentScale]=amount-maxAmount;
+            currentScale=other;
+        }
+        /**
+         * Swirl in Java coordinate System.<br>
+         * amount is a signed int.<p>
+         * If amount is positive, rotation goes clockwise.<br>
+         * If amount is negative, rotation goes anticlockwise.<br>
+         * amount of zero indicates no swirling.<br>
+         * amount of 1 indicates the smallest possible swirl.
+         * @param amount the amount by which this sprite should swirl.
+         */
+        public void swirlJavaCoord(int amount){
+            swirl(-amount);
+        }
+        public double getAngleJavaCoord(){
+            return getAngle();
+        }
+//        public int getYJavaCoord(){
+//            return getY();
+//        }
+//        public int getXJavaCoord(){
+//            return getX();
+//        }
+        public int getY(){
+            return currXY[SCALE_Y];
+        }
+        public int getX(){
+            return -currXY[SCALE_X];
+        }
+        public double getAngle(){
+            return Math.atan2(getY(),getX());
+        }
+        public void setDelay(int delay){
+            this.delay=delay;
+            if(delay<countdown)
+                countdown=delay;
+        }
+    }
